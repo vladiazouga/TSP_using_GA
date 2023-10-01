@@ -1,5 +1,5 @@
 # TSP_using_GA
-Certainly! Here's a revised README file for the provided code with reworded content:
+
 
 # Traveling Salesman Problem Solver using Genetic Algorithm
 
