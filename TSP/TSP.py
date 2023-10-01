@@ -1,218 +1,143 @@
-import random, operator
+import random
 import numpy as np
 import pandas as pd
 
-
-#Introduction to the Traveling Salesman Problem
+# Initial print statements explaining the purpose of the code.
 print("Genetic Algorithm for Traveling Salesman Problem")
-print("This code finds an optimal route for visiting a set of cities, minimizing the total distance traveled.")
-print("The algorithm starts with a population of random routes, and then breeds them to create a new generation of routes.")
-# Define a City class with functions for calculating distances.
+print("------------------------------------------------")
+print("This code demonstrates a genetic algorithm to solve the Traveling Salesman Problem (TSP).")
+print("The TSP involves finding the shortest possible route that visits a set of cities once and returns to the starting city.")
+print("In this implementation:")
+print("- A population of routes is evolved over generations.")
+print("- The fitness of each route is determined by its total distance.")
+print("- Routes with shorter distances are more fit and have a higher chance of being selected for reproduction.")
+print("- Crossover and mutation operations are used to create new routes in each generation.")
+print("- The algorithm continues until a stopping criterion is met.")
+print("Let's optimize a route for visiting a set of randomly generated cities.")
+print("\nOptimizing route...\n")
+
+# Define a City class to represent cities with x and y coordinates.
 class City:
-  def __init__(self, x, y):
-    self.x = x
-    self.y = y
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
 
-  #computes the distance between two cities
-  def distance(self, city):
-    distanceX = abs(self.x - city.x)
-    distanceY = abs(self.y - city.y)
+    def distance_to(self, other_city):
+        distance_x = abs(self.x - other_city.x)
+        distance_y = abs(self.y - other_city.y)
+        return np.sqrt(distance_x**2 + distance_y**2)
 
-    distance = np.sqrt((distanceX**2) + (distanceY**2))
-    return distance
+    def __repr__(self):
+        return f"({self.x},{self.y})"
 
-  def __repr__(self):
-    return "(" + str(self.x) + "," + str(self.y) + ")"
-# Define a Fitness class to track fitness and distance for a route.
+# Define a Fitness class to calculate the fitness (inverse of distance) of a route.
 class Fitness:
-  # Initializes variables for each chromosome
-  def __init__(self, route):
-    self.route = route
-    self.distance = 0
-    self.fitness = 0.0
+    def __init__(self, route):
+        self.route = route
+        self.distance = 0
+        self.fitness = 0.0
 
-  #Calculates the total distance of a route
-  def routeTotalDistance(self):
-    #If the total distance of a route is uninitialized
-    if self.distance == 0:
-      pathDistance = 0
-      # Calculate the distance between each pair of cities in the route
-      for i in range(0, len(self.route)):
-        fromCity = self.route[i]
-        toCity = None
-        if i + 1 < len(self.route):
-          toCity = self.route[i + 1]
+    def calculate_route_distance(self):
+        if self.distance == 0:
+            path_distance = sum(self.route[i].distance_to(self.route[i + 1]) for i in range(len(self.route) - 1))
+            path_distance += self.route[-1].distance_to(self.route[0])
+            self.distance = path_distance
+        return self.distance
+
+    def calculate_fitness(self):
+        if self.fitness == 0:
+            self.fitness = 1 / self.calculate_route_distance()
+        return self.fitness
+
+# Function to create a random route by shuffling a list of cities.
+def create_random_route(city_list):
+    return random.sample(city_list, len(city_list))
+
+# Function to initialize a population of random routes.
+def initialize_population(population_size, city_list):
+    return [create_random_route(city_list) for _ in range(population_size)]
+
+# Function to rank routes in a population based on fitness.
+def rank_routes(population):
+    return sorted(enumerate(Fitness(route).calculate_fitness() for route in population), key=lambda x: x[1], reverse=True)
+
+# Function to select the elite routes from the ranked population.
+def select_elite(ranked_population, elite_size):
+    selected_indexes = [index for index, _ in ranked_population[:elite_size]]
+    return selected_indexes
+
+# Function to create a mating pool from the selected elite routes.
+def create_mating_pool(population, selected_indexes):
+    return [population[index] for index in selected_indexes]
+
+# Function to perform crossover (reproduction) between two parent routes.
+def crossover(parent_one, parent_two):
+    gene_a, gene_b = sorted(random.sample(range(len(parent_one)), 2))
+    child_part_one = parent_one[gene_a:gene_b]
+    child_part_two = [city for city in parent_two if city not in child_part_one]
+    return child_part_one + child_part_two
+
+# Function to breed a new population from the mating pool.
+def breed_population(mating_pool, elite_size):
+    elite = mating_pool[:elite_size]
+    non_elite = mating_pool[elite_size:]
+    children = [crossover(random.choice(elite), random.choice(elite)) for _ in range(len(non_elite))]
+    return elite + children
+
+# Function to perform mutation on a route with a given mutation rate.
+def mutate_route(route, mutation_rate):
+    for i in range(len(route)):
+        if random.random() < mutation_rate:
+            j = random.randint(0, len(route) - 1)
+            route[i], route[j] = route[j], route[i]
+    return route
+
+# Function to perform mutation on a population.
+def mutate_population(population, mutation_rate):
+    return [mutate_route(route, mutation_rate) for route in population]
+
+# Function to evolve the current generation to the next generation.
+def evolve_to_next_generation(current_generation, elite_size, mutation_rate):
+    ranked_population = rank_routes(current_generation)
+    selected_indexes = select_elite(ranked_population, elite_size)
+    mating_pool_result = create_mating_pool(current_generation, selected_indexes)
+    children = breed_population(mating_pool_result, elite_size)
+    next_generation = mutate_population(children, mutation_rate)
+    return next_generation
+
+# Main genetic algorithm function to find the optimized route.
+def genetic_algorithm(city_list, population_size, elite_size, mutation_rate, generations):
+    population = initialize_population(population_size, city_list)
+    print(f"Initial solution: {1 / rank_routes(population)[0][1]}")
+
+    previous_best = 1 / rank_routes(population)[0][1]
+    run_ender = 0
+    total_generations = 0
+
+    for _ in range(generations):
+        if run_ender >= 500:
+            break
+        total_generations += 1
+        population = evolve_to_next_generation(population, elite_size, mutation_rate)
+        current_best = 1 / rank_routes(population)[0][1]
+        dif = abs(current_best - previous_best)
+        if dif < 1e-20:
+            run_ender += 1
         else:
-          toCity = self.route[0]
-        pathDistance += fromCity.distance(toCity)
-      self.distance = pathDistance
-    return self.distance
+            previous_best = current_best
 
-  #Calculates the fitness of each chromosome (inverse of the total distance)
-  def determineFitness(self):
-    if(self.fitness == 0):
-      self.fitness = 1/ float(self.routeTotalDistance())
-    return self.fitness
+        # Print the best distance in each generation.
+        print(f"Generation {total_generations}: Best Distance = {1 / current_best}")
 
-# Initializes a list of 25 cities with x and y coordinates.
-cityList = []
-for i in range(0, 25):
-  cityList.append(City(x=int(random.random() * 200), y=int(random.random() * 200)))
+    print(f"Optimized solution: {1 / rank_routes(population)[0][1]}")
+    print(f"Total generations: {total_generations}")
+    best_route_index = rank_routes(population)[0][0]
+    best_route = population[best_route_index]
+    print(f"Best Route: {best_route}")
+    return best_route
 
-#This function creates a randomized array of cities to be visited in a certain order.
-def createRoute(cityList):
-  route = random.sample(cityList, len(cityList))
-  return route
+# Generate a list of random cities.
+city_list = [City(x=int(random.random() * 200), y=int(random.random() * 200)) for _ in range(25)]
 
-# Initializes the population of chromosomes by shuffling the citylist in random order to create diversity.
-def initializePopultaion(populationSize, cityList):
-  population = []
-  for i in range(0, populationSize):
-    population.append(createRoute(cityList))
-  return population
-
-# Creates a dictionary, where each index of the population is mapped to its fitness.
-# Than orders the indexes of each population by their fitness in order from greatest to least.
-def rankRoutes(population):
-  fitnessRanked = {}
-  for i in range(0, len(population)):
-    fitnessRanked[i] = Fitness(population[i]).determineFitness()
-  return sorted(fitnessRanked.items(), key = operator.itemgetter(1), reverse = True )
-
-#Selects the parents to breed for the next generation of chromosomes
-
-def selection(rankedPopulation, eliteSize):
-  selectionResults = []
-  df = pd.DataFrame(np.array(rankedPopulation), columns=["Index","Fitness"])
-  df['cum_sum'] = df.Fitness.cumsum()
-  #Determines the chance that a chromosome may be selected for breeding
-  df["cum_perc"] = 100 * df.cum_sum/df.Fitness.sum()
-
-  #Retains the highest fitness members of the population
-  for i in range(0, eliteSize):
-    selectionResults.append(rankedPopulation[i][0])
-
-  #generates a random number, if the fitness rank is within a certain threshold of the random number, the member of the population is chosen.
-  for i in range(0, len(rankedPopulation) - eliteSize):
-      pick = 100*random.random()
-      for i in range(0, len(rankedPopulation)):
-          if pick <= df.iat[i,3]:
-              selectionResults.append(rankedPopulation[i][0])
-              break
-  return selectionResults
-
-# Retrieve the actual chromosomes from their indexes.
-def matingPool(population, selectionResults):
-  matingPool = []
-  for i in range(0, len(selectionResults)):
-    index = selectionResults[i]
-    matingPool.append(population[index])
-  return matingPool
-
-#Produces a child from two chromosomes
-def breed(parentOne, parentTwo):
-  child = []
-  # These arrays receive data from each of the parent that will be combined into the new child.
-  childPartOne = []
-  childPartTwo = []
-
-  #Choose a random set of information from parent One that will be passed down to the child.
-  geneA = int(random.random() * len(parentOne))
-  geneB = int(random.random() * len(parentOne))
-  startPoint = min(geneA, geneB)
-  endPoint = max(geneA, geneB)
-
-  for i in range(startPoint, endPoint):
-    childPartOne.append(parentOne[i])
-
-  #Fill in the remaining needed data in the child with data that does not already exist in it.
-  childPartTwo = [item for item in parentTwo if item not in childPartOne]
-  child = childPartOne + childPartTwo
-  return child
-
-# Create the next generation by breeding.
-def breedPopulation(matingPool, eliteSize):
-  children = []
-  
-  length = len(matingPool) - eliteSize
-  pool = random.sample(matingPool, len(matingPool))
-
-  # Preserve elite chromosomes.
-  for i in range(0, eliteSize):
-    children.append(matingPool[i])
-
-  #Creates partners for breeding
-  for i in range(0, length):
-    child = breed(pool[i], pool[len(matingPool) - i - 1])
-    children.append(child)
-  return children
-
-#Mutates a chromosome by swapping two cities in the route.
-def mutate(individual, mutationRate):
-  for swapped in range(len(individual)):
-    if(random.random() < mutationRate):
-      swapWith = int(random.random() * len(individual))
-
-      city1 = individual[swapped]
-      city2 = individual[swapWith]
-
-      individual[swapped] = city2
-      individual[swapWith] = city1
-  return individual
-
-#Mutate each individual in the population, and passes them to the mutate function.
-def mutatePopulation(population, mutationRate):
-    mutatedPop = []
-
-    for ind in range(0, len(population)):
-        mutatedInd = mutate(population[ind], mutationRate)
-        mutatedPop.append(mutatedInd)
-    return mutatedPop
-
-#This function calls all functions needed to develop next generation.
-def nextGeneration(currentGen, eliteSize, mutationRate):
-  popRanked = rankRoutes(currentGen)
-  selectionResults = selection(popRanked, eliteSize)
-  matingpool = matingPool(currentGen, selectionResults)
-  children = breedPopulation(matingpool, eliteSize)
-  nextGeneration = mutatePopulation(children, mutationRate)
-  return nextGeneration
-
-#This function runs the genetic algorithm for a given amount of generations.
-def geneticAlgorithm(population, popSize, eliteSize, mutationRate, generations):
-  #Creates initial population
-  pop = initializePopultaion(popSize, population)
-  print("Initial solution: " + str(1 / rankRoutes(pop)[0][1]))
-
-  previousBest = (1 / rankRoutes(pop)[0][1])
-  print(previousBest)
-
-  #This is a variable that checks if the algorithm has barely increased its solution in, if it has not by a certain amount of runs, stop running.
-  runEnder = 0
-
-  totalGenerations = 0
-  #Runs the algorithm for a given amount of generations
-  for i in range(0, generations):
-    if runEnder >= 500:
-      break
-    totalGenerations += 1
-    pop = nextGeneration(pop, eliteSize, mutationRate)
-    currentBest = (1 / rankRoutes(pop)[0][1])
-    dif = abs(currentBest - previousBest)
-    if(dif < 0.00000000000000000001):
-      runEnder += 1
-    else:
-      previousBest = currentBest
-    # Print the progress for each generation
-    # Print the best sequence of cities and their distances
-    best_route_index = rankRoutes(pop)[0][0]
-    best_route = pop[best_route_index]
-    print(f"Generation {i+1}: Best Distance = {currentBest},\n Best Route = {best_route}")
-
-  print("Optimized solution: " + str(1 / rankRoutes(pop)[0][1]))
-  print("Total generations: " + str(totalGenerations))
-  bestRouteIndex = rankRoutes(pop)[0][0]
-  bestRoute = pop[bestRouteIndex]
-  return bestRoute
-
-geneticAlgorithm(population=cityList, popSize=100, eliteSize=20, mutationRate=0.01, generations=500)
+# Run the genetic algorithm with specified parameters.
+genetic_algorithm(city_list, population_size=100, elite_size=20, mutation_rate=0.01, generations=500)
