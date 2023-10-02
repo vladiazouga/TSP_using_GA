@@ -1,7 +1,7 @@
 # Overview / Report
 
 *Emmanuel David*
-
+Google Colab Link: https://colab.research.google.com/drive/1b6LbZdJyKGGzuYdA8nZCzk2QMGZk6QBc#scrollTo=BcAVmRH6jVop
 In this assignment, we were asked to create a smart computer program using a genetic algorithm. This program tackles a tricky problem called the traveling salesperson problem. It's so tough because there are just too many possible solutions to check them all one by one.
 
 A genetic algorithm is like a smart computer trick. It works a bit like nature, where a bunch of possible answers are tested over and over. The best ones get mixed together to make even better answers.

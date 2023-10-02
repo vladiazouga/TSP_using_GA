@@ -106,8 +106,31 @@ def evolve_to_next_generation(current_generation, elite_size, mutation_rate):
     return next_generation
 
 # Main genetic algorithm function to find the optimized route.
-def genetic_algorithm(city_list, population_size, elite_size, mutation_rate, generations):
-    population = initialize_population(population_size, city_list)
+def genetic_algorithm(city_list, population_size=None, elite_size=None, mutation_rate=None, generations=None):
+        # Prompt for the number of cities
+    num_cities = int(input("Enter the number of cities: "))
+
+    # Generate a list of random cities based on the user-defined number
+    city_list = [City(x=int(random.random() * 200), y=int(random.random() * 200)) for _ in range(num_cities)]
+
+    # Print the names of the cities in the tour and its total distance
+    print("Number of cities in the tour:", len(city_list))
+
+    if population_size is None:
+        pop_size = int(input("Enter the integer population size (default = 100): "))
+    else:
+        pop_size = population_size
+
+    if mutation_rate is None:
+        mutation_rate = float(input("Enter the float mutation rate (default = 0.01): "))
+
+    if elite_size is None:
+        elite_size = int(input("Enter the proportion of elite routes in each generation (default = 20): "))
+
+    if generations is None:
+        generations = int(input("Enter the number of generations (default = 500): "))
+
+    population = initialize_population(pop_size, city_list)
     print(f"Initial solution: {1 / rank_routes(population)[0][1]}")
 
     previous_best = 1 / rank_routes(population)[0][1]
@@ -115,7 +138,7 @@ def genetic_algorithm(city_list, population_size, elite_size, mutation_rate, gen
     total_generations = 0
 
     for _ in range(generations):
-        if run_ender >= 500:
+        if run_ender >= 100:
             break
         total_generations += 1
         population = evolve_to_next_generation(population, elite_size, mutation_rate)
@@ -136,8 +159,28 @@ def genetic_algorithm(city_list, population_size, elite_size, mutation_rate, gen
     print(f"Best Route: {best_route}")
     return best_route
 
-# Generate a list of random cities.
-city_list = [City(x=int(random.random() * 200), y=int(random.random() * 200)) for _ in range(25)]
+# Additional code to gather input parameters
+print("----------------------------------------------------------------")
+print("Parameters for the genetic algorithm")
+print("----------------------------------------------------------------")
 
-# Run the genetic algorithm with specified parameters.
-genetic_algorithm(city_list, population_size=100, elite_size=20, mutation_rate=0.01, generations=500)
+# Print the names of the cities in the best tour and its total distance
+print("Number of cities in the tour:", len(city_list))
+
+# Prompt for population size
+pop_size = int(input("Enter the integer population size (default = 100): "))
+
+# Prompt for mutation rate
+mutation_rate = float(input("Enter the float mutation rate (default = 0.01): "))
+
+# Prompt for elite size
+elite_size = int(input("Enter the proportion of elite routes in each generation (default = 20): "))
+
+# Prompt for the number of generations
+generations = int(input("Enter the number of generations (default = 500): "))
+
+print("Number of stagnant generations: 100")
+print("\n")
+
+# Run the genetic algorithm with user-defined or default parameters
+genetic_algorithm(city_list, population_size=pop_size, elite_size=elite_size, mutation_rate=mutation_rate, generations=generations)
